@@ -1,4 +1,8 @@
+.DS_Store
 .env
 venv/
+venv-py39-backup/
 __pycache__/
+static/uploads/
+static/highlighted/heatmap_*.png
 vit_mri_model_augmented_final.pth

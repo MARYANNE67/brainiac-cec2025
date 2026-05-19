@@ -1,104 +1,187 @@
-# Brainiac: Your AI tool for MRI scans that has sharper vision to make smarter decisions
+# Brainiac
 
-**Names: Chloe, Masuma, Maryanne**
+Brainiac is a Flask application for classifying brain MRI scans with a fine-tuned Vision Transformer model. The app accepts an MRI image, runs inference, and returns a tumor / no-tumor prediction with a confidence score. When a tumor is predicted, Brainiac also generates a Grad-CAM style heat-map overlay to highlight the image region that influenced the model most.
 
-Team: MacDonald Bridge
+![Brainiac interface preview](static/preview.png)
 
-![Brainiac](static/preview.png)
+## Team
 
-## Table of Contents
+MacDonald Bridge: Chloe, Masuma, and Maryanne
 
-- [Tools Used](#tools-used)
-- [Setup Instructions](#setup-instructions)
-- [Testing](#testing)
-- [UI Testing](#ui-testing)
-- [File Structure](#file-structure)
+## Features
 
-## Tools Used
+- MRI image upload workflow
+- Vision Transformer image classification
+- Confidence score reporting
+- Grad-CAM style heat-map overlay for tumor predictions
+- Batch test script that writes predictions to `results.csv`
+- Environment-based configuration for local and judging machines
 
-- **Python**: Programming language used for backend development.
-- **Flask**: Web framework used for creating the web application.
-- **Virtualenv**: Tool used for creating isolated Python environments.
-- **Google Drive**: Used for storing and sharing the model file.
-- **HTML/CSS**: Used for front-end development.
+## Prediction Output
 
-## Setup Instructions
+Brainiac shows different outputs depending on the model prediction:
 
-1. **Create a virtual environment:**
+| Prediction | UI Output |
+| --- | --- |
+| `tumor` | Prediction label, confidence percentage, and a heat-map overlay on the uploaded MRI image. |
+| `no tumor` | Prediction label and confidence percentage only. No heat map is shown. |
 
-   ```sh
-   python -m venv venv
-   ```
+## Grad-CAM Heat Maps
 
-2. **Activate the virtual environment:**
+Brainiac uses a Grad-CAM style visualization to make tumor predictions easier to inspect. After the model predicts the `tumor` class, the app:
 
-   - On Windows:
-     ```sh
-     .\venv\bin\activate
-     ```
-   - On macOS and Linux:
-     ```sh
-     source venv/bin/activate
-     ```
+1. Runs a gradient pass for the tumor class.
+2. Converts the Vision Transformer patch activations into a 2D attention map.
+3. Resizes the map to match the uploaded MRI image.
+4. Blends the heat map with the original scan.
+5. Displays the highlighted image in the result panel.
 
-3. **Install requirements within the virtual environment:**
+Generated heat-map files are saved in:
 
-   ```sh
-   pip install -r requirements.txt
-   ```
+```text
+static/highlighted/
+```
 
-4. **Download model from the following link and place into project folder:**
+The generated filenames follow this pattern:
 
-Note: need to have access permissions via email to download model
+```text
+heatmap_<uploaded-file-name>.png
+```
 
-[Google Drive link](https://drive.google.com/drive/folders/1RMO9VaVmPAmpuvj3_KWvFcfCKGfVryfz?usp=drive_link)
+These generated heat maps are ignored by Git because they are runtime outputs.
 
-5. **Set up environment variables for the following:**
+## Tech Stack
 
-   - `CEC_2025_dataset` : the path for the data test folder
-   - `MODEL` : path to the model file
+- Python 3.10+
+- Flask
+- PyTorch and Torchvision
+- Hugging Face Transformers
+- Pandas
+- HTML, CSS, and JavaScript
 
-6. **For front-end, run the following:**
-   ```sh
-   flask run
-   ```
+## Project Structure
 
-## Testing
+```text
+.
+├── app.py                  # Flask web application
+├── test.py                 # Batch inference script for CEC test images
+├── requirements.txt        # Python dependencies
+├── templates/
+│   └── index.html          # Web UI template
+├── static/
+│   ├── styles.css          # App styling
+│   ├── app.js              # Client-side image preview
+│   ├── uploads/            # Uploaded images
+│   └── highlighted/        # Grad-CAM output examples
+├── CEC_2025/
+│   ├── CEC_test/           # Test images
+│   ├── no/                 # No-tumor samples
+│   └── yes/                # Tumor samples
+└── competition-info/       # Competition documentation
+```
 
-1. **Upload the images into the dataset test folder**
+## Setup
 
-2. **From the command line, run the following**
+### 1. Create a virtual environment
 
-   ```sh
-   python test.py
-   ```
+Use Python 3.10 or newer. Python 3.11 is recommended.
 
-3. **Output for the tests will be seen in results.csv file**
+```sh
+python3.11 -m venv venv
+source venv/bin/activate
+```
 
-## UI Testing
+On Windows:
 
-1. From the command line, run the following
+```sh
+python -m venv venv
+.\venv\Scripts\activate
+```
 
-   ```sh
-   flask run 
-   ```
+### 2. Install dependencies
 
-2. Upload a tumor or non tumor image on the file input then press the analyze button
+```sh
+pip install -r requirements.txt
+```
 
-3. View the image, the predicted label and confidence score
+### 3. Download the model
 
+Download the trained model from the Google Drive folder and place it in the project root.
 
-## File Structure 
+[Download model from Google Drive](https://drive.google.com/drive/folders/1RMO9VaVmPAmpuvj3_KWvFcfCKGfVryfz?usp=drive_link)
 
-`/train` : this folder contains our model training notebook, this is the training steps we took to extract out best final finetuned model. 
+Expected local path:
 
-`/static` : contains /highlighted and /uploads and other images. The hightlighted images were passed through grad-cam to get heat map of the tumors.
+```text
+vit_mri_model_augmented_final.pth
+```
 
-`/templates` : contain the index.html for our frontend structure.
+Access to the Drive folder may require permission from the project team.
 
-`app.py` : this is the flask back-end
+### 4. Configure environment variables
 
-`test.py` : this is our test file that returns the csv prediction the judges will use.
+Create a `.env` file in the project root:
 
-`requirement.txt` : this contains the dependency used in our UI and test file.
+```sh
+CEC_2025_dataset="/absolute/path/to/brainiac-cec2025/CEC_2025/CEC_test"
+MODEL="/absolute/path/to/brainiac-cec2025/vit_mri_model_augmented_final.pth"
+```
 
+Environment variables:
+
+| Variable | Description |
+| --- | --- |
+| `CEC_2025_dataset` | Absolute path to the test image folder used by `test.py`. |
+| `MODEL` | Absolute path to the downloaded `.pth` model weights file. |
+
+## Running the Web App
+
+```sh
+source venv/bin/activate
+flask --app app run
+```
+
+Open the local URL printed by Flask, usually:
+
+```text
+http://127.0.0.1:5000
+```
+
+## Running Batch Tests
+
+The batch script reads images from `CEC_2025_dataset`, predicts each image label, and appends the output to `results.csv`.
+
+```sh
+source venv/bin/activate
+python test.py
+```
+
+The output file uses this format:
+
+```csv
+Test Image,Result
+test__001.png,no
+test__002.png,yes
+```
+
+## Troubleshooting
+
+### `MODEL is not set`
+
+Check that `.env` exists and includes a valid `MODEL` path.
+
+### `Model file was not found`
+
+Download the model file and confirm the path matches the `MODEL` value in `.env`.
+
+### Dependency install fails on Python 3.9
+
+Some pinned dependencies require Python 3.10 or newer. Recreate the virtual environment with Python 3.10+.
+
+### No test images are processed
+
+Confirm `CEC_2025_dataset` points directly to the folder containing files named like `test__001.png`.
+
+## Notes
+
+Brainiac is a competition prototype and is not intended for clinical diagnosis. Predictions should be interpreted only as model output for the CEC 2025 project workflow.

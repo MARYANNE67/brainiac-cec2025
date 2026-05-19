@@ -4,110 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-color: #f4f4f4;
-            text-align: center;
-        }
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            max-width: 450px;
-        }
-        h1 {
-            font-size: 28px;
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-        p {
-            font-size: 16px;
-            color: #555;
-        }
-        input[type="file"] {
-            margin: 10px 0;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            cursor: pointer;
-            margin-top: 10px;
-            font-size: 16px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .image-preview {
-            margin-top: 20px;
-            max-width: 100%;
-            border-radius: 5px;
-        }
-        .result {
-            margin-top: 20px;
-            font-size: 18px;
-            font-weight: bold;
-            padding: 15px;
-            border-radius: 5px;
-            text-align: left;
-        }
-        .tumor { color: red; background: #ffdddd; }
-        .no-tumor { color: green; background: #ddffdd; }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        li {
-            margin: 5px 0;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    <main class="app">
+        <header class="app-header">
+            <div>
+                <p class="eyebrow">MRI analysis</p>
+                <h1>Brainiac</h1>
+                <p class="subtitle">Upload a brain MRI scan to get a tumor prediction and confidence score.</p>
+            </div>
+            <span class="status {% if model_error %}status--warning{% else %}status--ready{% endif %}">
+                {% if model_error %}Setup needed{% else %}Ready{% endif %}
+            </span>
+        </header>
 
-    <div class="container">
-        <h1>Brainiac: Tumor Detection AI</h1>
-        <p>Upload an MRI image, and Brainiac will predict if a tumor is present.</p>
-
-        <form action="/" method="post" enctype="multipart/form-data">
-            <input type="file" name="file" accept="image/*" required>
-            <br>
-            <button type="submit">Analyze Image</button>
-        </form>
-
-        {% if filename %}
-        <h3>Uploaded Image:</h3>
-        <img src="{{ url_for('static', filename='uploads/' + filename) }}" class="image-preview" alt="Uploaded Image">
-        {% endif %}
-
-        {% if prediction %}
-        <div class="result">
-            <ul>
-                <li>
-                    <strong>Prediction:</strong> 
-                    <span class="{% if prediction.pred == 'Tumor' %}tumor{% else %}no-tumor{% endif %}">
-                        {{ prediction.pred }}
-                    </span>
-                </li>
-                {% if prediction.confidence is defined %}
-                <li>
-                    <strong>Confidence:</strong> {{ prediction.confidence }}
-                </li>
-                {% else %}
-                <li><strong>Confidence:</strong> N/A</li>
-                {% endif %}
-            </ul>
+        {% if model_error %}
+        <div class="notice" role="status">
+            <strong>Model unavailable:</strong>
+            <span>{{ model_error }}</span>
         </div>
         {% endif %}
 
-    </div>
+        <section class="card" aria-label="MRI analyzer">
+            <form class="uploader" action="/" method="post" enctype="multipart/form-data">
+                <label class="dropzone" for="file">
+                    <input id="file" type="file" name="file" accept="image/*" required>
+                    <span class="dropzone__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M12 16V4m0 0 4.5 4.5M12 4 7.5 8.5M5 20h14" />
+                        </svg>
+                    </span>
+                    <span class="dropzone__title">Choose MRI image</span>
+                    <span class="dropzone__meta">PNG or JPG</span>
+                </label>
 
+                <div class="preview">
+                    {% if filename %}
+                    <img id="image-preview" src="{{ url_for('static', filename='uploads/' + filename) }}" alt="Uploaded MRI preview">
+                    {% else %}
+                    <img id="image-preview" src="{{ url_for('static', filename='uploads/test__001.png') }}" alt="Sample MRI preview">
+                    {% endif %}
+                </div>
+
+                <button class="button" type="submit" {% if model_error %}disabled{% endif %}>
+                    Analyze scan
+                </button>
+            </form>
+
+            <aside class="result" aria-label="Prediction result">
+                <p class="eyebrow">Result</p>
+                {% if prediction %}
+                {% set has_tumor = prediction.pred == 'tumor' %}
+                <div class="prediction {% if has_tumor %}prediction--alert{% else %}prediction--clear{% endif %}">
+                    {{ prediction.pred }}
+                </div>
+                <div class="result-row">
+                    <span>Confidence</span>
+                    <strong>{{ "%.2f"|format(prediction.confidence * 100) }}%</strong>
+                </div>
+                <div class="result-row">
+                    <span>File</span>
+                    <strong>{{ filename }}</strong>
+                </div>
+                {% if prediction.heatmap %}
+                <div class="heatmap">
+                    <p class="eyebrow">Heat map</p>
+                    <img src="{{ url_for('static', filename='highlighted/' + prediction.heatmap) }}" alt="MRI scan with tumor heat map overlay">
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="empty-result">
+                    <span aria-hidden="true"></span>
+                    <p>No scan analyzed yet.</p>
+                </div>
+                {% endif %}
+            </aside>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
